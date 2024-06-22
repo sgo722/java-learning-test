@@ -7,16 +7,14 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -134,16 +132,18 @@ public class FunctionalProgrammingTest {
             final var brie = new User("Brie", 12);
 
             // TODO: 아래 코드를 Comparator를 구현하는 익명 클래스로 변경하여 User의 나이를 기준으로 정렬하세요. 람다로도 구현해보세요.
-            final var users = new ArrayList<User>(List.of(brown, neo, brie));
-            for (int i = 0, end = users.size(); i < end; i++) {
-                for (int j = i + 1; j < end; j++) {
-                    if (users.get(i).age() > users.get(j).age()) {
-                        final var temp = users.get(i);
-                        users.set(i, users.get(j));
-                        users.set(j, temp);
-                    }
-                }
-            }
+            final var users = Stream.of(brown,neo, brie)
+                    .sorted(Comparator.comparingInt(User::age))
+                    .toList();
+//            for (int i = 0, end = users.size(); i < end; i++) {
+//                for (int j = i + 1; j < end; j++) {
+//                    if (users.get(i).age() > users.get(j).age()) {
+//                        final var temp = users.get(i);
+//                        users.set(i, users.get(j));
+//                        users.set(j, temp);
+//                    }
+//                }
+//            }
 
             for (final var user : users) {
                 System.out.println(user.name() + ": " + user.age());
@@ -239,36 +239,19 @@ public class FunctionalProgrammingTest {
             class Calculator {
                 // TODO: 람다를 활용하여 sum 메서드를 통해 중복을 제거하세요.
                 static int sumAll(final List<Integer> numbers) {
-                    var total = 0;
-                    for (final var number : numbers) {
-                        total += number;
-                    }
-
-                    return total;
+                    return sum(numbers, number -> true);
                 }
+
+
 
                 // TODO: 람다를 활용하여 sum 메서드를 통해 중복을 제거하세요.
                 static int sumAllEven(final List<Integer> numbers) {
-                    var total = 0;
-                    for (final var number : numbers) {
-                        if (number % 2 == 0) {
-                            total += number;
-                        }
-                    }
-
-                    return total;
+                    return sum(numbers, number -> number % 2 == 0);
                 }
 
                 // TODO: 람다를 활용하여 sum 메서드를 통해 중복을 제거하세요.
                 static int sumAllOverThree(final List<Integer> numbers) {
-                    var total = 0;
-                    for (final var number : numbers) {
-                        if (number > 3) {
-                            total += number;
-                        }
-                    }
-
-                    return total;
+                    return sum(numbers, number -> number > 3);
                 }
 
                 private static int sum(
@@ -276,7 +259,10 @@ public class FunctionalProgrammingTest {
                         final Predicate<Integer> condition
                 ) {
                     // TODO: 조건에 맞게 필터링하여 합계를 구하는 기능을 구현하세요.
-                    return 0;
+                    return numbers.stream()
+                            .filter(condition)
+                            .reduce(Integer::sum)
+                            .orElse(0);
                 }
             }
 
@@ -420,7 +406,17 @@ public class FunctionalProgrammingTest {
                 }
             }
 
-            System.out.println(maxAgeCrew.name() + ": " + maxAgeCrew.nickname() + ": " + maxAgeCrew.age());
+            crews.stream()
+                    .filter(c -> c.name().startsWith("김"))
+                    .filter(c -> c.age()>= 25)
+                    .filter(c -> c.age < 30)
+                    .filter(c-> c.nickname().length() == 2)
+                    .max(Comparator.comparingInt(Crew::age))
+                            .stream()
+                                    .peek(crew -> System.out.println(crew.name() + ": " + crew.nickname() + ": " + crew.age()))
+                                            .findAny()
+                                                    .orElseThrow();
+
 
             // -----------------------------------------------------------------
 
@@ -434,18 +430,10 @@ public class FunctionalProgrammingTest {
         @Test
         @DisplayName("Stream API를 활용하여 전쟁과 평화 내용 중 문자 길이가 12보다 큰 경우의 수를 구한다")
         void Stream_API를_활용하여_전쟁과_평화_내용_중_문자_길이가_12보다_큰_경우의_수를_구한다() throws IOException {
-            final var contents = Files.readString(Paths.get("src/test/resources/war-and-peace.txt"));
-
-            // TODO: 아래 코드를 Stream API를 활용하여 구현하세요.
-            final var words = contents.split("\\P{L}+");
-            var count = 0;
-            for (final var word : words) {
-                if (word.length() > 12) {
-                    count++;
-                }
-            }
-
-            // -----------------------------------------------------------------
+            final var count = Arrays.stream(Files.readString(Paths.get("src/test/resources/war-and-peace.txt"))
+                        .split("\\P{L}+"))
+                    .filter(word -> word.length() > 12)
+                    .count();
 
             assertThat(count).isEqualTo(1_946);
         }
@@ -459,18 +447,10 @@ public class FunctionalProgrammingTest {
         void for문을_활용하여_콜론을_추가하는_기능을_Stream_API를_활용하여_구현한다() {
             final var numbers = List.of(1, 2, 3, 4, 5);
 
-            // TODO: 아래 코드를 Stream API를 활용하여 구현하세요.
-            final var stringBuilder = new StringBuilder();
-            for (int i = 0, end = numbers.size(); i < end; i++) {
-                stringBuilder.append(numbers.get(i));
-
-                if (i != end - 1) {
-                    stringBuilder.append(":");
-                }
-            }
-
-            final var result = stringBuilder.toString();
-
+            final var result = numbers.stream()
+                    .map(String::valueOf)
+                            .reduce((a,b) -> a + "+" + b)
+                                    .orElseThrow();
             // -----------------------------------------------------------------
 
             assertThat(result).isEqualTo("1:2:3:4:5");
@@ -487,21 +467,13 @@ public class FunctionalProgrammingTest {
             final var numbers = List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
             final var expected = 18;
 
-            // TODO: 아래 코드를 Stream API를 활용하여 구현하세요.
-            var result = 0;
-            for (final Integer number : numbers) {
-                if (2 >= number) {
-                    continue;
-                }
-                if (number > 5) {
-                    continue;
-                }
-                if (number * 2 < 7) {
-                    continue;
-                }
-
-                result += number * 2;
-            }
+            final var result= numbers.stream()
+                    .filter(number -> 2 < number)
+                    .filter(number -> number <= 5)
+                    .map(number -> number * 2)
+                    .filter(number -> number > 7)
+                    .reduce(Integer::sum)
+                    .orElseThrow();
 
             // -----------------------------------------------------------------
 
@@ -524,10 +496,17 @@ public class FunctionalProgrammingTest {
         @DisplayName("전쟁과 평화 내용 중 조건에 해당하는 단어를 찾아서 추출한다")
         void 전쟁과_평화_내용_중_아래_조건에_해당하는_단어를_찾아서_추출한다() throws IOException {
             final var contents = Files.readString(Paths.get("src/test/resources/war-and-peace.txt"));
-
             // TODO: 위 조건에 맞는 10개의 단어를 추출하세요.
             // final var words = contents.split("\\P{L}+");
-            final var results = new ArrayList<String>();
+            final var results = Arrays.stream(contents.split("\\P{L}+"))
+                    .distinct()
+                            .sorted(Comparator.comparing(String::length))
+                                    .limit(100)
+                                            .filter(word -> Character.isLowerCase(word.charAt(0)))
+                    .map(String::toLowerCase)
+                    .sorted()
+                    .limit(10)
+                    .toList();
 
             // -----------------------------------------------------------------
             assertThat(results).containsExactly(
@@ -555,7 +534,13 @@ public class FunctionalProgrammingTest {
 
             // TODO: 가장 많이 등장하는 단어의 수를 찾으세요.
             // final var words = contents.split("\\P{L}+");
-            final var result = 0L;
+            final var result = Arrays.stream(contents.split("\\P{L}+"))
+                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                            .entrySet()
+                                    .stream()
+                    .max(Comparator.comparingLong(Map.Entry::getValue))
+                    .map(Map.Entry::getValue)
+                    .orElseThrow();
 
             // -----------------------------------------------------------------
             assertThat(result).isEqualTo(31_949L);
@@ -576,19 +561,27 @@ public class FunctionalProgrammingTest {
         void 피보나치_수열을_선언형으로_구현한다() {
             class Fibonacci {
                 // TODO: 기존에 작성된 피보나치 수열을 구하는 코드에서 선언형으로 변경해봅니다. 가능하면 메서드 내부에 세미콜론을 하나만 사용하여 구현해보세요.
-                static int solve(final int n) {
-                    var previous = 0;
-                    var next = 1;
+//                static int solve(final int n) {
+//                    var previous = 0;
+//                    var next = 1;
+//
+//                    // iterate till limit
+//                    for (int i = 0; i < n; i++) {
+//                        int sum = previous + next;
+//
+//                        previous = next;
+//                        next = sum;
+//                    }
+//
+//                    return previous;
+//                }
 
-                    // iterate till limit
-                    for (int i = 0; i < n; i++) {
-                        int sum = previous + next;
-
-                        previous = next;
-                        next = sum;
-                    }
-
-                    return previous;
+                static int solve(final int n){
+                    return Stream.iterate(new int[]{0,1}, values -> new int[]{values[1], values[0] + values[1]})
+                            .limit(n+1)
+                            .mapToInt(values -> values[0])
+                            .max()
+                            .orElse(0);
                 }
             }
 
